@@ -2,7 +2,7 @@
 
 A vertical toggle card for **Lights, Switches, and Fans**.
 
-Press and hold the toggle to open the **more-info-card popup**.
+Press and hold the toggle to open the **more-info popup**.
 
 ---
 
@@ -22,61 +22,26 @@ Press and hold the toggle to open the **more-info-card popup**.
 
 ### HACS (Recommended)
 
+You can install this card directly from HACS using the button below:
+
+[![Open your Home Assistant instance and open the repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](
+https://my.home-assistant.io/redirect/hacs_repository/?owner=drmogie&repository=vertical-toggle-card&category=dashboard
+)
+
+**Manual steps (if you prefer):**
 1. Open **HACS**
 2. Go to **Frontend**
-3. Click the three dots → **Custom repositories**
-4. Add this repository URL
-   - Category: **Frontend**
+3. Click the three dots (⋮) → **Custom repositories**
+4. Add this repository:
+   - **URL:** `https://github.com/drmogie/vertical-toggle-card`
+   - **Category:** `Dashboard`
 5. Install **Vertical Toggle Card**
 6. Restart Home Assistant
 
+---
+
 ### Manual Installation
 
-1. Copy the files from `/dist` into:
-   ```
+1. Copy the files into:
+   ```text
    config/www/vertical-toggle-card/
-   ```
-2. Add the resource:
-   ```yaml
-   resources:
-     - url: /local/vertical-toggle-card/vertical-toggle-card.js
-       type: module
-   ```
-3. Restart Home Assistant
-
----
-
-## Usage
-
-```yaml
-type: custom:vertical-toggle-card
-entity: light.living_room
-```
-
----
-
-## Configuration Options
-
-| Option | Default | Description |
-|------|--------|-------------|
-| `entity` | required | Light, switch, or fan entity |
-| `name` | null | Optional display name |
-| `name_align` | none | none / top / bottom / left |
-| `icon` | null | Custom icon (mdi:*) |
-| `icon_size` | 80px | Icon size |
-| `track_width` | 110px | Toggle width |
-| `toggle_gap` | 5px | Gap between toggle and thumb |
-
----
-
-## Notes
-
-- If `name_align` is set to `none`, the name is hidden.
-- Leaving `name` empty uses the entity's friendly name.
-
----
-
-## Support
-
-Please open an issue on GitHub for bugs or feature requests.
-
