@@ -1,7 +1,6 @@
 {
   "name": "Vertical Toggle Card",
-  "content_in_root": false,
   "render_readme": true,
-  "domains": ["light", "switch", "fan"],
-  "country": ["US"]
+  "content_in_root": true,
+  "filename": "vertical-toggle-card.js"
 }
