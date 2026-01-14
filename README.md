@@ -28,6 +28,24 @@ Press and hold the toggle to open the **Home Assistant more-info popup**.
 
 ---
 
+## Screenshots
+
+### Add to Dashboard Picker
+
+The card appears in Home Assistant’s **Add to Dashboard** picker for quick setup.
+
+![Vertical Toggle Card add to dashboard picker](images/add-to-dashboard.png)
+
+---
+
+### Card Configuration Editor
+
+The built-in visual editor allows you to configure the card without writing YAML and includes a live preview.
+
+![Vertical Toggle Card configuration editor](images/config-editor.png)
+
+---
+
 ## Installation
 
 ### HACS (Recommended)
