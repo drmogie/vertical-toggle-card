@@ -1,6 +1,6 @@
 import { LitElement, html, css } from "https://unpkg.com/lit@2.8.0/index.js?module";
 
-const VERSION = "2026.1.5";
+const VERSION = "2026.1.7";
 
 class VerticalToggleCard extends LitElement {
   static properties = {
@@ -15,39 +15,42 @@ class VerticalToggleCard extends LitElement {
   }
 
   setConfig(config) {
-    if (!config?.entity) throw new Error("You need to define an entity");
+    // Allow empty entity (no throw). Render placeholder until entity is selected.
+    const entity = (config?.entity ?? "").trim();
 
     this.config = {
-      entity: config.entity,
+      entity,
 
       // name
-      name: config.name ?? null,
-      name_align: config.name_align ?? "none", // none | top | bottom | left | right
+      name: config?.name ?? null,
+      name_align: config?.name_align ?? "none", // none | top | bottom | left | right
 
       // icon
-      icon: config.icon ?? null,
-      hide_icon: config.hide_icon ?? false,
-      icon_size: config.icon_size ?? "40px",
+      icon: config?.icon ?? null, // if set, always use this icon
+      hide_icon: config?.hide_icon ?? false,
+      icon_size: config?.icon_size ?? "40px",
 
       // layout
-      track_width: config.track_width ?? "120px",
-      toggle_gap: config.toggle_gap ?? "4px",
-      track_radius: config.track_radius ?? "26px",
-      thumb_radius: config.thumb_radius ?? "22px",
+      track_width: config?.track_width ?? "120px",
+      toggle_gap: config?.toggle_gap ?? "4px",
+      track_radius: config?.track_radius ?? "26px",
+      thumb_radius: config?.thumb_radius ?? "22px",
 
       // hold
-      hold_duration: Number(config.hold_duration ?? 800),
+      hold_duration: Number(config?.hold_duration ?? 800),
 
       // optional color overrides
-      on_color: config.on_color ?? null,
-      off_color: config.off_color ?? null,
-      unavailable_color: config.unavailable_color ?? null,
-      unknown_color: config.unknown_color ?? null
+      on_color: config?.on_color ?? null,
+      off_color: config?.off_color ?? null,
+      unavailable_color: config?.unavailable_color ?? null,
+      unknown_color: config?.unknown_color ?? null
     };
   }
 
   get stateObj() {
-    return this.hass?.states?.[this.config.entity] ?? null;
+    const id = (this.config?.entity ?? "").trim();
+    if (!id) return null;
+    return this.hass?.states?.[id] ?? null;
   }
 
   get _domain() {
@@ -58,10 +61,15 @@ class VerticalToggleCard extends LitElement {
     return this.stateObj?.state === "on";
   }
 
+  get _hasEntity() {
+    return !!(this.config?.entity && this.config.entity.trim().length);
+  }
+
   /* ================= NAME ================= */
 
   _getName() {
-    if (!this.stateObj) return "";
+    if (!this._hasEntity) return this.config.name ?? "Select entity";
+    if (!this.stateObj) return this.config.name ?? "";
     return this.config.name ?? this.stateObj.attributes?.friendly_name ?? "";
   }
 
@@ -87,6 +95,7 @@ class VerticalToggleCard extends LitElement {
   /* ================= COLORS ================= */
 
   _getActiveColor() {
+    if (!this._hasEntity) return "var(--warning-color)";
     if (!this.stateObj) return "var(--state-active-color)";
 
     const state = this.stateObj.state;
@@ -111,12 +120,10 @@ class VerticalToggleCard extends LitElement {
   }
 
   _getIconColor() {
-    if (!this.stateObj) return "var(--secondary-text-color)";
+    if (!this._hasEntity || !this.stateObj) return "var(--secondary-text-color)";
 
     const attrs = this.stateObj.attributes || {};
-    const isOn = this._isOn;
-
-    if (!isOn) return "var(--secondary-text-color)";
+    if (!this._isOn) return "var(--secondary-text-color)";
 
     if (this._domain === "light") {
       if (attrs.rgb_color) {
@@ -132,15 +139,65 @@ class VerticalToggleCard extends LitElement {
     return "var(--primary-text-color)";
   }
 
-  _getIcon() {
-    if (this.config.icon) return this.config.icon;
-    if (this.stateObj?.attributes?.icon) return this.stateObj.attributes.icon;
+  /* ================= ICON ================= */
+
+  _renderIcon(iconColor) {
+    if (this.config.hide_icon) return "";
+
+    // User override
+    if (this.config.icon) {
+      return html`
+        <ha-icon
+          icon="${this.config.icon}"
+          style="color:${iconColor}"
+        ></ha-icon>
+      `;
+    }
+
+    // Placeholder
+    if (!this._hasEntity) {
+      return html`
+        <ha-icon
+          icon="mdi:help-circle-outline"
+          style="color:${iconColor}"
+        ></ha-icon>
+      `;
+    }
+
+    // Use HA computed state icon (matches core & button-card behavior)
+    if (customElements.get("ha-state-icon") && this.stateObj) {
+      return html`
+        <ha-state-icon
+          .hass=${this.hass}
+          .stateObj=${this.stateObj}
+          style="color:${iconColor}"
+        ></ha-state-icon>
+      `;
+    }
+
+    // Fallback
+    if (this.stateObj?.attributes?.icon) {
+      return html`
+        <ha-icon
+          icon="${this.stateObj.attributes.icon}"
+          style="color:${iconColor}"
+        ></ha-icon>
+      `;
+    }
 
     const d = this._domain;
-    if (d === "light") return "mdi:lightbulb";
-    if (d === "fan") return "mdi:fan";
-    if (d === "switch") return "mdi:toggle-switch";
-    return "mdi:power";
+    const fallback =
+      d === "light"
+        ? "mdi:lightbulb"
+        : d === "fan"
+        ? "mdi:fan"
+        : d === "switch"
+        ? "mdi:toggle-switch"
+        : "mdi:power";
+
+    return html`
+      <ha-icon icon="${fallback}" style="color:${iconColor}"></ha-icon>
+    `;
   }
 
   /* ================= ACTIONS ================= */
@@ -162,6 +219,8 @@ class VerticalToggleCard extends LitElement {
   }
 
   _moreInfo() {
+    if (!this._hasEntity) return;
+
     this.dispatchEvent(
       new CustomEvent("hass-more-info", {
         detail: { entityId: this.config.entity },
@@ -172,6 +231,8 @@ class VerticalToggleCard extends LitElement {
   }
 
   _onPointerDown() {
+    if (!this.stateObj) return;
+
     this._held = false;
     clearTimeout(this._holdTimer);
 
@@ -184,6 +245,7 @@ class VerticalToggleCard extends LitElement {
 
   _onPointerUp() {
     clearTimeout(this._holdTimer);
+    if (!this.stateObj) return;
     if (!this._held) this._toggle();
   }
 
@@ -194,14 +256,18 @@ class VerticalToggleCard extends LitElement {
   /* ================= RENDER ================= */
 
   render() {
-    if (!this.stateObj) return html``;
-
-    const align = this.config.name_align;
+    const align = this.config?.name_align ?? "none";
     const nameFirst = align === "top" || align === "left";
 
     const activeColor = this._getActiveColor();
     const iconColor = this._getIconColor();
     const isOn = this._isOn;
+
+    // Edge-flush padding with micro-inset
+    const padL = align === "left" ? "2px" : "var(--card-pad)";
+    const padR = align === "right" ? "2px" : "var(--card-pad)";
+    const padT = align === "top" ? "1px" : "var(--card-pad)";
+    const padB = align === "bottom" ? "2px" : "var(--card-pad)";
 
     const cardVars = `
       --track-width:${this.config.track_width};
@@ -210,16 +276,23 @@ class VerticalToggleCard extends LitElement {
       --thumb-radius:${this.config.thumb_radius};
       --icon-size:${this.config.icon_size};
       --active-color:${activeColor};
+
+      --pad-l:${padL};
+      --pad-r:${padR};
+      --pad-t:${padT};
+      --pad-b:${padB};
     `;
 
+    const placeholder = !this._hasEntity || !this.stateObj;
+
     return html`
-      <ha-card class="root" style="${cardVars}">
+      <ha-card class="root ${placeholder ? "placeholder" : ""}" style="${cardVars}">
         <div class="center">
           <div class="unit ${align}">
             ${nameFirst ? this._renderName() : ""}
 
             <div
-              class="switch"
+              class="switch ${placeholder ? "disabled" : ""}"
               @pointerdown=${this._onPointerDown.bind(this)}
               @pointerup=${this._onPointerUp.bind(this)}
               @pointerleave=${this._onPointerLeave.bind(this)}
@@ -228,14 +301,9 @@ class VerticalToggleCard extends LitElement {
                 this._moreInfo();
               }}
             >
-              <div class="track ${isOn ? "on" : ""}">
-                <div class="thumb ${isOn ? "on" : "off"}">
-                  ${this.config.hide_icon
-                    ? ""
-                    : html`<ha-icon
-                        icon="${this._getIcon()}"
-                        style="color:${iconColor}"
-                      ></ha-icon>`}
+              <div class="track ${isOn ? "on" : ""} ${placeholder ? "unknown" : ""}">
+                <div class="thumb ${isOn ? "on" : "off"} ${placeholder ? "unknown" : ""}">
+                  ${this._renderIcon(iconColor)}
                 </div>
               </div>
             </div>
@@ -256,8 +324,15 @@ class VerticalToggleCard extends LitElement {
     }
 
     ha-card.root {
-      padding: var(--card-pad);
+      padding-top: var(--pad-t, var(--card-pad));
+      padding-bottom: var(--pad-b, var(--card-pad));
+      padding-left: var(--pad-l, var(--card-pad));
+      padding-right: var(--pad-r, var(--card-pad));
       box-sizing: border-box;
+
+      width: fit-content;
+      max-width: 100%;
+      overflow: visible;
 
       max-height: calc(
         (var(--track-width) * 2) +
@@ -266,11 +341,12 @@ class VerticalToggleCard extends LitElement {
         (var(--card-pad) * 2)
       );
 
-      max-width: calc(
+      max-inline-size: calc(
         var(--track-width) +
         var(--side-name-width) +
         var(--unit-gap) +
-        (var(--card-pad) * 2)
+        var(--pad-l, var(--card-pad)) +
+        var(--pad-r, var(--card-pad))
       );
     }
 
@@ -278,6 +354,7 @@ class VerticalToggleCard extends LitElement {
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: visible;
     }
 
     .unit {
@@ -285,6 +362,7 @@ class VerticalToggleCard extends LitElement {
       justify-content: center;
       gap: var(--unit-gap);
       align-items: center;
+      width: max-content;
     }
 
     .unit.none {
@@ -312,6 +390,10 @@ class VerticalToggleCard extends LitElement {
       -webkit-tap-highlight-color: transparent;
     }
 
+    .switch.disabled {
+      cursor: default;
+    }
+
     .track {
       width: var(--track-width);
       height: calc(var(--track-width) * 2);
@@ -325,6 +407,14 @@ class VerticalToggleCard extends LitElement {
 
     .track.on {
       background: color-mix(in srgb, var(--active-color) 20%, transparent);
+    }
+
+    .track.unknown {
+      background: color-mix(
+        in srgb,
+        var(--warning-color) 18%,
+        var(--state-inactive-color)
+      );
     }
 
     .thumb {
@@ -349,7 +439,16 @@ class VerticalToggleCard extends LitElement {
       bottom: var(--toggle-gap);
     }
 
-    ha-icon {
+    .thumb.unknown {
+      background: color-mix(
+        in srgb,
+        var(--warning-color) 28%,
+        var(--disabled-text-color)
+      );
+    }
+
+    ha-icon,
+    ha-state-icon {
       --mdc-icon-size: var(--icon-size);
     }
 
@@ -402,7 +501,6 @@ class VerticalToggleCard extends LitElement {
       line-height: 1;
     }
 
-    /* rotation (text only, safe) */
     .name-box.right .name-inner {
       writing-mode: vertical-rl;
       text-orientation: mixed;
@@ -416,7 +514,6 @@ class VerticalToggleCard extends LitElement {
     }
   `;
 
-  /* ───────── EDITOR HOOK (SAFE) ───────── */
   static async getConfigElement() {
     await import("./vertical-toggle-card-editor.js");
     return document.createElement("vertical-toggle-card-editor");
@@ -433,7 +530,8 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "vertical-toggle-card",
   name: "Vertical Toggle Card",
-  description: "Vertical toggle for Lights, Switches, and Fans. Press and hold toggle for more-info-card popup"
+  description:
+    "Vertical toggle for Lights, Switches, and Fans. Press and hold toggle for more-info-card popup"
 });
 
 console.info(
