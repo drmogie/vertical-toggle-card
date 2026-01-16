@@ -79,3 +79,10 @@ https://my.home-assistant.io/redirect/lovelace_resources/
 resources:
   - url: /local/vertical-toggle-card/vertical-toggle-card.js
     type: module
+```
+
+## Documentation
+
+- [General Options](info.md)
+- [Changelog](changelog.md)
+
